@@ -25,7 +25,7 @@
  * @brief Prints a matrix with its name
  * @param m The matrix to print
  */
-#define MAT_PRINT(m) mat_print(m, #m)
+#define MAT_PRINT(m) mat_print(m, #m, 0)
 
 /**
  * @brief Access a matrix element at position (i, j)
@@ -83,13 +83,22 @@ int mat_destroy(Mat *m);
 
 
 /**
- * @brief Extract a row from a matrix
+ * @brief Copies a row from a matrix
  * @param dst Destination matrix (should be 1xN)
  * @param src Source matrix
  * @param row Row index to extract
  * @return 0 on success, -1 on failure
  */
 int mat_row(Mat* dst, const Mat * const src, size_t row);
+
+/**
+ * @brief Extract a row from a matrix
+ * @param src Source matrix
+ * @param row Row index to extract
+ * @return Mat on success, NULL on failure
+ */
+
+Mat extract_row(const Mat * const src, size_t row); 
 
 /**
  * @brief Extract a column from a matrix
@@ -99,6 +108,15 @@ int mat_row(Mat* dst, const Mat * const src, size_t row);
  * @return 0 on success, -1 on failure
  */
 int mat_col(Mat* dst, const Mat * const src, size_t col);
+
+/**
+ * @brief Extract a column from a matrix
+ * @param src Source matrix
+ * @param col Column index to extract
+ * @return Mat on success, NULL on failure
+ */
+
+Mat extract_col(const Mat * const src, size_t row);
 
 /**
  * @brief Copy a matrix into another existing one
@@ -138,7 +156,7 @@ int mat_fill(Mat * const m, float value);
  * @param m Matrix to print
  * @param name Name to display before the matrix
  */
-void mat_print(const Mat m, char *name);
+void mat_print(const Mat m, char *name, size_t padding);
 
 /**
  * @brief Multiply two matrices
@@ -233,6 +251,16 @@ int mat_row(Mat *dst, const Mat * const src, size_t row) {
   return 0;
 }
 
+Mat extract_row(const Mat * const src, size_t row) {
+  Mat mat = {
+    .rows = 1,
+    .cols = src->cols,
+    .stride = src->stride,
+    .es = &MAT_AT(*src, row, 0)
+  };
+  return mat;
+}
+
 int mat_col(Mat *dst, const Mat * const src, size_t col) {
   if (mat_deinit(dst)) // in case there are some leftovers
     return -1;
@@ -245,14 +273,25 @@ int mat_col(Mat *dst, const Mat * const src, size_t col) {
   return 0;
 }
 
-void mat_print(Mat m, char *mname) {
-  printf("%s [ = \n", mname);
+Mat extract_col(const Mat * const src, size_t col) { 
+  Mat mat; 
+  mat_init(&mat, src->rows, 1);
+  for (size_t i = 0; i < src->rows; i++) {
+    MAT_AT(mat, i, 0) =  MAT_AT(*src, i, col);
+  }
+
+  return mat;
+}
+
+void mat_print(Mat m, char *mname, size_t padding) {
+  printf("%*s%s [ = \n", (int) padding, "", mname);
   for (size_t i = 0; i < m.rows; i++) {
+    printf("%*s", (int) padding, "");
     for (size_t j = 0; j < m.cols; j++)
       printf("%f, ", MAT_AT(m, i, j));
-    printf("\n");
+    printf("%*s\n", (int) padding, "");
   }
-  printf("]\n");
+  printf("%*s]\n", (int) padding, "");
 }
 
 static inline float rand_float(void) {

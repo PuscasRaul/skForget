@@ -7,6 +7,18 @@
 #define NN_ALLOC malloc
 #endif // NN_ALLOC
 
+#ifndef NN_PRINT
+#define NN_PRINT(nn) nn_print(nn, #nn) 
+#endif
+
+#ifndef NN_INPUT
+#define NN_INPUT(nn) nn.layers[0].as
+#endif
+
+#ifndef NN_OUTPUT
+#define NN_OUTPUT(nn) nn->layers[nn->layer_count - 1].as
+#endif
+
 typedef struct {
   size_t input_size; 
   size_t output_size;
@@ -86,8 +98,9 @@ float cost(NN *network, Mat ti, Mat to);
  * @param to Training output matrix
  */
 void learn(NN *network, gradient *grad, Mat ti, Mat to);
+void nn_print(const NN * const network, char *name);
 
-// for gradient
+// FOR GRADIENT
 
 /**
  * @brief Initialize a gradient structure for a neural network
