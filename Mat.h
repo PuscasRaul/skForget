@@ -21,8 +21,26 @@
 #define MAT_ASSERT assert
 #endif // MAT_ASSERT
 
+/**
+ * @brief Prints a matrix with its name
+ * @param m The matrix to print
+ */
 #define MAT_PRINT(m) mat_print(m, #m)
+
+/**
+ * @brief Access a matrix element at position (i, j)
+ * @param m The matrix
+ * @param i Row index
+ * @param j Column index
+ * @return The element at position (i, j)
+ */
 #define MAT_AT(m, i, j) (m).es[(i)*(m).stride + (j)]
+
+/**
+ * @brief Function pointer type for activation functions
+ * @param x The input value
+ * @return The activated value
+ */
 typedef float (*ActivationFunc)(float x);
 
 typedef struct {
@@ -32,24 +50,127 @@ typedef struct {
   float *es;
 } Mat;
 
+/**
+ * @brief Initialize a matrix with given dimensions
+ * @param m Pointer to the matrix to initialize
+ * @param rows Number of rows
+ * @param cols Number of columns
+ * @return 0 on success, -1 on failure
+ */
 int mat_init(Mat * const m, size_t rows, size_t cols);
+
+/**
+ * @brief Free resources associated with a matrix
+ * @param m Pointer to the matrix to deinitialize
+ * @return 0 on success, -1 on failure
+ */
 int mat_deinit(Mat * const m);
 
+/**
+ * @brief Create a new matrix with given dimensions
+ * @param rows Number of rows
+ * @param cols Number of columns
+ * @return Pointer to the created matrix or NULL on failure
+ */
 Mat *mat_create(size_t rows, size_t cols); 
+
+/**
+ * @brief Destroy a matrix created with mat_create
+ * @param m Pointer to the matrix to destroy
+ * @return 0 on success, -1 on failure
+ */
 int mat_destroy(Mat *m);
 
+
+/**
+ * @brief Extract a row from a matrix
+ * @param dst Destination matrix (should be 1xN)
+ * @param src Source matrix
+ * @param row Row index to extract
+ * @return 0 on success, -1 on failure
+ */
 int mat_row(Mat* dst, const Mat * const src, size_t row);
+
+/**
+ * @brief Extract a column from a matrix
+ * @param dst Destination matrix (should be Mx1)
+ * @param src Source matrix
+ * @param col Column index to extract
+ * @return 0 on success, -1 on failure
+ */
 int mat_col(Mat* dst, const Mat * const src, size_t col);
 
+/**
+ * @brief Copy a matrix into another existing one
+ * @param dst Destination matrix (must have same dimensions as src)
+ * @param src Source matrix
+ * @return 0 on success, -1 on failure
+ */
 int mat_inplace_copy(Mat *dst, const Mat * const src);
+
+/**
+ * @brief Create a new copy of a matrix
+ * @param dst Destination matrix (will be resized if necessary)
+ * @param src Source matrix
+ * @return 0 on success, -1 on failure
+ */
 int mat_deep_copy(Mat *dst, const Mat * const src);
+
+/**
+ * @brief Fill a matrix with random values within a given range
+ * @param m Matrix to randomize
+ * @param lower_bound Lower bound for random values
+ * @param upper_bound Upper bound for random values
+ * @return 0 on success, -1 on failure
+ */
 int mat_randomize(Mat *m, float lower_bound, float upper_bound);
+
+/**
+ * @brief Fill a matrix with a constant value
+ * @param m Matrix to fill
+ * @param value Value to fill the matrix with
+ * @return 0 on success, -1 on failure
+ */
 int mat_fill(Mat * const m, float value);
+
+/**
+ * @brief Print a matrix with a given name
+ * @param m Matrix to print
+ * @param name Name to display before the matrix
+ */
 void mat_print(const Mat m, char *name);
 
+/**
+ * @brief Multiply two matrices
+ * @param result Result matrix (must have proper dimensions)
+ * @param left Left operand
+ * @param right Right operand
+ * @return 0 on success, -1 on failure
+ * @note result must have dimensions left->rows x right->cols
+ */
 int mat_multiply(Mat * const result, const Mat * const left, const Mat * const right);
+
+/**
+ * @brief Multiply all elements of a matrix by a scalar
+ * @param m Matrix to scale
+ * @param value Scalar value
+ * @return 0 on success, -1 on failure
+ */
 int mat_scalar(Mat * const m, float value);
+
+/**
+ * @brief Add another matrix to the destination matrix
+ * @param dst Destination matrix (will be modified)
+ * @param a Matrix to add
+ * @return 0 on success, -1 on failure
+ */
 int mat_sum(Mat * const dst, const Mat * const a);
+
+/**
+ * @brief Apply an activation function to all elements of a matrix
+ * @param m Matrix to activate
+ * @param function Activation function to apply
+ */
 void mat_activate(Mat * const m, ActivationFunc function);
 
 #endif // MAT_H_

@@ -27,18 +27,95 @@ typedef struct {
 } gradient;
 
 // for neural network
+
+/**
+ * @brief Initialize a neural network with specified architecture
+ * @param neural_network Pointer to the neural network to initialize
+ * @param count Number of layers
+ * @param layers Array of layer sizes (including input and output layers)
+ * @param rate Learning rate
+ * @return 0 on success, -1 on failure
+ */
 int nn_init(NN *neural_network, size_t count, size_t *layers, float rate);
+
+/**
+ * @brief Free resources associated with a neural network
+ * @param neural_network Pointer to the neural network to deinitialize
+ * @return 0 on success, -1 on failure
+ */
 int nn_deinit(NN *neural_network);
+
+/**
+ * @brief Allocate and initialize a new neural network
+ * @param count Number of layers
+ * @param layers Array of layer sizes (including input and output layers)
+ * @param rate Learning rate
+ * @return Pointer to allocated neural network or NULL on failure
+ */
 NN *nn_alloc(size_t count, size_t *layers, float rate);
+
+/**
+ * @brief Free a neural network allocated with nn_alloc
+ * @param neural_network Pointer to the neural network to free
+ * @return 0 on success, -1 on failure
+ */
 int NN_free(NN *neural_network);
+
+/**
+ * @brief Perform forward propagation through the network
+ * @param network Pointer to the neural network
+ * @return 0 on success, -1 on failure
+ * @note Assumes the input layer (layer 0) activations are already set
+ */
 int forward_propagation(NN *network);
+
+/**
+ * @brief Calculate the mean squared error cost for the network
+ * @param network Pointer to the neural network
+ * @param ti Training input matrix (rows = samples, cols = input features)
+ * @param to Training output matrix (rows = samples, cols = output features)
+ * @return The calculated cost (mean squared error)
+ */
 float cost(NN *network, Mat ti, Mat to);
+
+/**
+ * @brief Update network weights and biases using the computed gradients
+ * @param network Pointer to the neural network to update
+ * @param grad Pointer to gradients
+ * @param ti Training input matrix
+ * @param to Training output matrix
+ */
 void learn(NN *network, gradient *grad, Mat ti, Mat to);
 
 // for gradient
+
+/**
+ * @brief Initialize a gradient structure for a neural network
+ * @param gradient Pointer to the gradient to initialize
+ * @param neural_network Pointer to the associated neural network
+ * @return 0 on success, -1 on failure
+ */
 int gradient_init(gradient *gradient, NN *neural_network);
+
+/**
+ * @brief Free resources associated with a gradient
+ * @param gradient Pointer to the gradient to deinitialize
+ * @return 0 on success, -1 on failure
+ */
 int gradient_deinit(gradient *gradient);
+
+/**
+ * @brief Allocate and initialize a new gradient for a neural network
+ * @param neural_network Pointer to the associated neural network
+ * @return Pointer to allocated gradient or NULL on failure
+ */
 gradient *gradient_alloc(NN *neural_network);
+
+/**
+ * @brief Free a gradient allocated with gradient_alloc
+ * @param gradient Pointer to the gradient to free
+ * @return 0 on success, -1 on failure
+ */
 int gradient_free(gradient *gradient);
 #endif
 
