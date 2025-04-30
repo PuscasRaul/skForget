@@ -25,14 +25,14 @@ int nn_init(NN *neural_network, size_t count, size_t *layers, float rate) {
     mat_init(&current_layer->ws, current_layer->input_size, current_layer->output_size);
     mat_init(&current_layer->bs, 1, current_layer->output_size);
     mat_init(&current_layer->as, 1, current_layer->output_size);
-    mat_randomize(&current_layer->ws, 0, 0.05);
-    mat_randomize(&current_layer->bs, 0, 0.05);
+    mat_randomize(&current_layer->ws, 0, 1);
+    mat_randomize(&current_layer->bs, 0, 1);
   }
   return 0;
 }
 
 int nn_deinit(NN *neural_network) {
-  for (size_t i = 0; i < neural_network->layer_count; i++) {
+  for (size_t i = 1; i < neural_network->layer_count; i++) {
     mat_deinit(&neural_network->layers[i].ws);
     mat_deinit(&neural_network->layers[i].bs);
     mat_deinit(&neural_network->layers[i].as);
@@ -100,7 +100,6 @@ float cost(NN *network, Mat ti, Mat to) {
   return cost;
 }
 
-
 int gradient_init(gradient *grad, NN *neural_network) {
   grad->layer_count = neural_network->layer_count;
   grad->layers = malloc(sizeof(layer) * grad->layer_count);
@@ -117,7 +116,6 @@ int gradient_init(gradient *grad, NN *neural_network) {
     mat_init(&grad->layers[i].bs, 1, output_size); 
     grad->layers[i].as.es = 0;
   }
-
   return 0;
 }
 
@@ -159,7 +157,7 @@ void gradient_compute(NN *neural_network, gradient *grad,
   float saved = 0.0f;
   for (size_t i = 1; i < neural_network->layer_count; i++) {
     for (size_t row = 0; row < neural_network->layers[i].ws.rows; row++) {
-      for (size_t col = 0; col < neural_network->layers[i].ws.rows; col++) {
+      for (size_t col = 0; col < neural_network->layers[i].ws.cols; col++) {
         saved = MAT_AT(neural_network->layers[i].ws, row, col);
         MAT_AT(neural_network->layers[i].ws, row, col) += eps;
         MAT_AT(grad->layers[i].ws, row, col) = 
@@ -181,14 +179,10 @@ void gradient_compute(NN *neural_network, gradient *grad,
 void learn(NN *network, gradient *grad, Mat ti, Mat to) {
   gradient_compute(network, grad, 1e-3, ti, to);
   for (size_t i = 0; i < network->layer_count; i++) {
-    for (size_t row = 0; row < network->layers[i].ws.rows; row++) {
-      for (size_t col = 0; col < network->layers[i].ws.cols; col++)
-        MAT_AT(network->layers[i].ws, row, col) -= 
-          network->learning_rate * MAT_AT(grad->layers[i].ws, row, col);
-    }
+    mat_scalar(&grad->layers[i].ws, (-1) * network->learning_rate);  
+    mat_sum(&network->layers[i].ws, &grad->layers[i].ws);           
 
-    for (size_t col = 0; col < network->layers[i].bs.cols; col++)
-      MAT_AT(network->layers[i].bs, 0, col) -= 
-        network->learning_rate * MAT_AT(grad->layers[i].bs, 0, col);
-  }
+    mat_scalar(&grad->layers[i].bs, (-1) * network->learning_rate);
+    mat_sum(&network->layers[i].bs, &grad->layers[i].bs);
+    }
 }
