@@ -32,8 +32,9 @@ int nn_init(NN *neural_network, size_t count, size_t *layers, float rate) {
     mat_init(&current_layer->ws, current_layer->input_size, current_layer->output_size);
     mat_init(&current_layer->bs, 1, current_layer->output_size);
     mat_init(&current_layer->as, 1, current_layer->output_size);
-    mat_randomize(&current_layer->ws, 0, 0.025f);
-    mat_randomize(&current_layer->bs, 0, 0.025f);
+    mat_randomize(&current_layer->ws, 0, 1);
+    mat_fill(&current_layer->bs, 0);
+    // mat_randomize(&current_layer->bs, 0, 1);
   }
   return 0;
 }
@@ -263,7 +264,7 @@ int backward_propagation(NN *network, gradient *grad, Mat ti, Mat to) {
       MAT_AT(grad->layers[network->layer_count - 1].as, 0, j) = (a - y);  
     }
 
-    for (int l = network->layer_count - 2; l > 0; --l) {
+    for (int l = network->layer_count - 2; l >= 0; --l) {
       layer *current = &network->layers[l];
       layer *next = &network->layers[l + 1];
       layer *grad_current = &grad->layers[l];
