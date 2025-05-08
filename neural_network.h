@@ -82,6 +82,16 @@ int NN_free(NN *neural_network);
 int forward_propagation(NN *network);
 
 /**
+ * @brief Perform backward propagation through the network
+ * @param network Pointer to neural network
+ * @param grad Pointer to gradient structure
+ * @param ti training data for input
+ * @param to trainig data for output
+ * @return 0 on success, -1 on failure
+ */
+int backward_propagation(NN *network, gradient *grad, Mat ti, Mat to);
+
+/**
  * @brief Calculate the mean squared error cost for the network
  * @param network Pointer to the neural network
  * @param ti Training input matrix (rows = samples, cols = input features)
@@ -96,8 +106,12 @@ float cost(NN *network, Mat ti, Mat to);
  * @param grad Pointer to gradients
  * @param ti Training input matrix
  * @param to Training output matrix
+ * @return 0 on success, -1 on failure
  */
-void learn(NN *network, gradient *grad, Mat ti, Mat to);
+int finite_diff(NN *network, gradient *grad, Mat ti, Mat to);
+
+int learn(NN *network, Mat ti, Mat to, size_t epochs, int (*fn)(NN *network,gradient *grad, Mat ti, Mat to));
+
 void nn_print(const NN * const network, char *name);
 
 // FOR GRADIENT
