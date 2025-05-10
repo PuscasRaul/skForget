@@ -135,13 +135,13 @@ int mat_inplace_copy(Mat *dst, const Mat * const src);
 int mat_deep_copy(Mat *dst, const Mat * const src);
 
 /**
- * @brief Fill a matrix with random values within a given range
+ * @brief Fill a matrix with random values using Xavier Initialization 
  * @param m Matrix to randomize
- * @param lower_bound Lower bound for random values
- * @param upper_bound Upper bound for random values
+ * @param lower_bound Lower bound the input layer size 
+ * @param upper_bound Output layer size 
  * @return 0 on success, -1 on failure
  */
-int mat_randomize(Mat *m, float lower_bound, float upper_bound);
+int mat_randomize_xavier(Mat *m, float input_size, float output_size);
 
 /**
  * @brief Fill a matrix with a constant value
@@ -298,18 +298,17 @@ static inline float rand_float(void) {
 	return (float) rand() / (float ) RAND_MAX;
 }
 
-int mat_randomize(Mat *m, float lower_bound, float upper_bound) {
-  if (lower_bound == upper_bound)
-    return -1;
+int mat_randomize_xavier(Mat *m, float input_size, float output_size) {
   static int seeded = 0;
   if (!seeded) {
     srand((unsigned)time(NULL));
     seeded = 1;
   }
+  float limit = sqrtf(6.0f / (input_size + output_size));
 
   for (size_t i = 0; i < m->rows; i++) {
     for (size_t j = 0; j < m->cols; j++)
-      MAT_AT(*m, i, j) = rand_float() * ( upper_bound - lower_bound) + lower_bound;
+      MAT_AT(*m, i, j) = rand_float() * 2 * limit - limit;
   }
   return 0;
 }

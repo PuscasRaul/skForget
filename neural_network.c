@@ -8,6 +8,42 @@ float sigmoidf(float x) {
   return x >= 0? (1.f / (1.f + exp(-x))) : (exp(x) / (1.f + exp(x)));
 }
 
+float reluf(float x) {
+  return x > 0 ? x : x * NN_RELU_PARAM;
+}
+
+float tanhf(float x) {
+  float ex = expf(x);
+  float enx = expf(-x);
+  return (ex - enx)/(ex + enx);
+}
+
+float actf(float x, Act act) {
+  switch (act) {
+    case ACT_SIG:
+      return sigmoidf(x);
+    case ACT_RELU:
+      return reluf(x);
+    case ACT_TANH:
+      return tanhf(x);
+    default:
+      return INFINITY;
+  }
+}
+
+float dactf(float y, Act act) {
+  switch (act) {
+    case ACT_SIG:
+      return y * (1 - y);
+    case ACT_RELU:
+      return y >= 0 ? 1 : NN_RELU_PARAM;
+    case ACT_TANH:
+      return 1 - y * y;
+    default:
+      return INFINITY;
+  }
+}
+
 int nn_init(NN *neural_network, size_t count, size_t *layers, float rate) {
   if (count == 0)
     return -1;
@@ -32,9 +68,8 @@ int nn_init(NN *neural_network, size_t count, size_t *layers, float rate) {
     mat_init(&current_layer->ws, current_layer->input_size, current_layer->output_size);
     mat_init(&current_layer->bs, 1, current_layer->output_size);
     mat_init(&current_layer->as, 1, current_layer->output_size);
-    mat_randomize(&current_layer->ws, 0, 1);
-    mat_fill(&current_layer->bs, 0);
-    // mat_randomize(&current_layer->bs, 0, 1);
+    mat_randomize_xavier(&current_layer->ws, layers[0], layers[count - 1]);
+    mat_fill(&current_layer->bs, 0.1);
   }
   return 0;
 }
@@ -75,12 +110,19 @@ int forward_propagation(NN *network) {
     mat_multiply(&network->layers[i].as, 
         &network->layers[i -1].as, &network->layers[i].ws);
     mat_sum(&network->layers[i].as, &network->layers[i].bs);
-    mat_activate(&network->layers[i].as, sigmoidf);
+    // mat_activate(&network->layers[i].as, sigmoidf);
+    for (size_t j = 0; j < network->layers[i].as.cols; j++)
+      MAT_AT(network->layers[i].as, 0, j) = 
+        actf(MAT_AT(network->layers[i].as, 0, j), NN_ACT);
   }
   return 0;
 }
 
-float cost(NN *network, Mat ti, Mat to) {
+float BCE(NN *network, Mat ti, Mat to) {
+
+}
+
+float MSE(NN *network, Mat ti, Mat to) {
   if (ti.rows != to.rows)
     return INFINITY;
   if (NN_OUTPUT(network).cols != to.cols)
@@ -178,10 +220,10 @@ void gradient_compute(NN *neural_network, gradient *grad,
         float saved = *w;
 
         *w = saved + eps;
-        c1 = cost(neural_network, ti, to);
+        c1 = MSE(neural_network, ti, to);
 
         *w = saved - eps;
-        c2 = cost(neural_network, ti, to);
+        c2 = MSE(neural_network, ti, to);
 
         MAT_AT(grad->layers[i].ws, row, col) = (c1 - c2) / (2 * eps);
         *w = saved;
@@ -193,10 +235,10 @@ void gradient_compute(NN *neural_network, gradient *grad,
       float saved = *w;
 
       *w = saved + eps;
-      c1 = cost(neural_network, ti, to);
+      c1 = MSE(neural_network, ti, to);
 
       *w = saved - eps;
-      c2 = cost(neural_network, ti, to);
+      c2 = MSE(neural_network, ti, to);
 
       MAT_AT(grad->layers[i].bs, 0, col) = (c1 - c2) / (2 * eps);
       *w = saved;
@@ -208,7 +250,6 @@ inline void static gradient_diff(NN *network, gradient * grad) {
   for (size_t i = 1; i < network->layer_count; i++) {
     mat_scalar(&grad->layers[i].ws, (-1) * network->learning_rate);  
     mat_sum(&network->layers[i].ws, &grad->layers[i].ws);           
-
     mat_scalar(&grad->layers[i].bs, (-1) * network->learning_rate);
     mat_sum(&network->layers[i].bs, &grad->layers[i].bs);
   }
@@ -279,7 +320,7 @@ int backward_propagation(NN *network, gradient *grad, Mat ti, Mat to) {
         }
 
         float a = MAT_AT(current->as, 0, j);
-        MAT_AT(grad_current->as, 0, j) = sum * a * (1 -a);
+        MAT_AT(grad_current->as, 0, j) = 2 * sum * dactf(a, NN_ACT);
       }
     }
 
@@ -312,7 +353,7 @@ int backward_propagation(NN *network, gradient *grad, Mat ti, Mat to) {
     for (size_t k = 0; k < grad->layers[i].bs.cols; k++)
       MAT_AT(grad->layers[i].bs, 0, k) /= n;
   }
- 
+
   gradient_diff(network, grad);
   mat_deinit(&y_expected);
   mat_deinit(&x);
@@ -328,6 +369,8 @@ int learn(NN *network, Mat ti, Mat to, size_t epochs, int (*fn)(NN *network, gra
   for (size_t epoch = 0; epoch < epochs; epoch++) {
     fn(network, &grad, ti, to);
   }
+
+  gradient_deinit(&grad);
 
   return 0;
 }

@@ -19,6 +19,21 @@
 #define NN_OUTPUT(nn) nn->layers[nn->layer_count - 1].as
 #endif
 
+#ifndef NN_ACT
+#define NN_ACT ACT_SIG
+#endif
+
+#ifndef NN_RELU_PARAM
+#define NN_RELU_PARAM 0.1f
+#endif
+
+typedef enum {
+  ACT_SIG,
+  ACT_RELU,
+  ACT_TANH, 
+  ACT_SIN,
+} Act;
+
 typedef struct {
   size_t input_size; 
   size_t output_size;
@@ -98,7 +113,7 @@ int backward_propagation(NN *network, gradient *grad, Mat ti, Mat to);
  * @param to Training output matrix (rows = samples, cols = output features)
  * @return The calculated cost (mean squared error)
  */
-float cost(NN *network, Mat ti, Mat to);
+float MSE(NN *network, Mat ti, Mat to);
 
 /**
  * @brief Update network weights and biases using the computed gradients
