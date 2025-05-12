@@ -9,23 +9,23 @@
 
 #ifndef NN_PRINT
 #define NN_PRINT(nn) nn_print(nn, #nn) 
-#endif
+#endif // NN_PRINT
 
 #ifndef NN_INPUT
 #define NN_INPUT(nn) nn.layers[0].as
-#endif
+#endif // NN_INPUT
 
 #ifndef NN_OUTPUT
 #define NN_OUTPUT(nn) nn->layers[nn->layer_count - 1].as
-#endif
+#endif // NN_OUTPUT
 
 #ifndef NN_ACT
 #define NN_ACT ACT_SIG
-#endif
+#endif // NN_ACT
 
 #ifndef NN_RELU_PARAM
 #define NN_RELU_PARAM 0.1f
-#endif
+#endif // NN_RELU_PARAM
 
 typedef enum {
   ACT_SIG,
@@ -33,6 +33,12 @@ typedef enum {
   ACT_TANH, 
   ACT_SIN,
 } Act;
+
+typedef enum {
+  LOSS_MSE,
+  LOSS_BCE,
+  LOSS_CE,
+} Loss;
 
 typedef struct {
   size_t input_size; 
@@ -46,6 +52,7 @@ typedef struct {
   size_t layer_count; // how many layers the neural network contains
   layer *layers; 
   float learning_rate;
+  Loss loss_function;
 } NN;
 
 typedef struct {
@@ -63,7 +70,7 @@ typedef struct {
  * @param rate Learning rate
  * @return 0 on success, -1 on failure
  */
-int nn_init(NN *neural_network, size_t count, size_t *layers, float rate);
+int nn_init(NN *neural_network, size_t count, size_t *layers, float rate, Loss lf);
 
 /**
  * @brief Free resources associated with a neural network
@@ -79,7 +86,8 @@ int nn_deinit(NN *neural_network);
  * @param rate Learning rate
  * @return Pointer to allocated neural network or NULL on failure
  */
-NN *nn_alloc(size_t count, size_t *layers, float rate);
+
+NN *nn_alloc(size_t count, size_t *layers, float rate, Loss lf);
 
 /**
  * @brief Free a neural network allocated with nn_alloc
@@ -113,7 +121,10 @@ int backward_propagation(NN *network, gradient *grad, Mat ti, Mat to);
  * @param to Training output matrix (rows = samples, cols = output features)
  * @return The calculated cost (mean squared error)
  */
-float MSE(NN *network, Mat ti, Mat to);
+
+float MSE(Mat predicted, Mat expected);
+
+float BCE(Mat predicted, Mat expected);
 
 /**
  * @brief Update network weights and biases using the computed gradients
