@@ -43,6 +43,7 @@ typedef enum {
 typedef struct {
   size_t input_size; 
   size_t output_size;
+  Act act_func;
   Mat ws;
   Mat bs;
   Mat as;
@@ -70,7 +71,7 @@ typedef struct {
  * @param rate Learning rate
  * @return 0 on success, -1 on failure
  */
-int nn_init(NN *neural_network, size_t count, size_t *layers, float rate, Loss lf);
+int nn_init(NN *neural_network, size_t count, size_t *layers, float rate,Act af, Loss lf);
 
 /**
  * @brief Free resources associated with a neural network
@@ -87,7 +88,7 @@ int nn_deinit(NN *neural_network);
  * @return Pointer to allocated neural network or NULL on failure
  */
 
-NN *nn_alloc(size_t count, size_t *layers, float rate, Loss lf);
+NN *nn_alloc(size_t count, size_t *layers, float rate, Act af, Loss lf);
 
 /**
  * @brief Free a neural network allocated with nn_alloc

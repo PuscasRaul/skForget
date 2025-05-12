@@ -1,5 +1,6 @@
 #include <stdio.h>
 #define MAT_IMPLEMENTATION
+#define NN_ACT ACT_TANH
 #include "neural_network.h"
 #define ARRAY_LEN(xs) sizeof((xs)) / sizeof((xs)[0])
 
@@ -104,7 +105,7 @@ float compute_loss_deriv(float activation, float expected, Loss lf) {
   }
 }
 
-int nn_init(NN *neural_network, size_t count, size_t *layers, float rate, Loss lf) {
+int nn_init(NN *neural_network, size_t count, size_t *layers, float rate, Act af, Loss lf) {
   if (count == 0)
     return -1;
   neural_network->loss_function = lf;
@@ -119,8 +120,10 @@ int nn_init(NN *neural_network, size_t count, size_t *layers, float rate, Loss l
   mat_init(&neural_network->layers[0].bs, 1, 1);
   neural_network->layers[0].input_size = layers[0];
   neural_network->layers[0].output_size = layers[0];
+  neural_network->layers[0].act_func = af;
 
   for(size_t i = 1; i < count; i++) {
+    neural_network->layers[i].act_func = af;
     neural_network->layers[i].input_size = layers[i-1];
     neural_network->layers[i].output_size= layers[i];
 
@@ -150,12 +153,12 @@ int nn_deinit(NN *neural_network) {
   return 0;
 }
 
-NN *nn_alloc(size_t count, size_t *layers, float rate, Loss lf) {
+NN *nn_alloc(size_t count, size_t *layers, float rate, Act af, Loss lf) {
   NN *neural_network = malloc(sizeof(NN)); 
   if (!neural_network)
     return NULL;
 
-  nn_init(neural_network, count, layers, rate, lf);
+  nn_init(neural_network, count, layers, rate, af, lf);
   return neural_network;
 }
 
@@ -174,12 +177,10 @@ int forward_propagation(NN *network) {
     // mat_activate(&network->layers[i].as, sigmoidf);
     for (size_t j = 0; j < network->layers[i].as.cols; j++)
       MAT_AT(network->layers[i].as, 0, j) = 
-        actf(MAT_AT(network->layers[i].as, 0, j), NN_ACT);
+        actf(MAT_AT(network->layers[i].as, 0, j), network->layers[i].act_func);
   }
   return 0;
 }
-
-
 
 int gradient_init(gradient *grad, NN *neural_network) {
   grad->layer_count = neural_network->layer_count;
@@ -231,46 +232,47 @@ int gradient_free(gradient *gradient) {
 }
 
 /*
-void gradient_compute(NN *neural_network, gradient *grad, 
-    float eps, Mat ti, Mat to) {
-  
-  // have to go over only on the internal layers
-  // so we skip layer[0]  
-  float c1, c2;
-  for (size_t i = 0; i < neural_network->layer_count; i++) {
-    for (size_t row = 0; row < neural_network->layers[i].ws.rows; row++) {
-      for (size_t col = 0; col < neural_network->layers[i].ws.cols; col++) {
+   void gradient_compute(NN *neural_network, gradient *grad, 
+   float eps, Mat ti, Mat to) {
 
-        float *w = &MAT_AT(neural_network->layers[i].ws, row, col);
-        float saved = *w;
+// have to go over only on the internal layers
+// so we skip layer[0]  
+float c1, c2;
+for (size_t i = 0; i < neural_network->layer_count; i++) {
+for (size_t row = 0; row < neural_network->layers[i].ws.rows; row++) {
+for (size_t col = 0; col < neural_network->layers[i].ws.cols; col++) {
 
-        *w = saved + eps;
-        forward_propagation(neural_network);
-        c1 = MSE(neural_network->layers[neural_network->layer_count - 1].as, to);
+float *w = &MAT_AT(neural_network->layers[i].ws, row, col);
+float saved = *w;
 
-        *w = saved - eps;
-        c2 = MSE(neural_network, ti, to);
+ *w = saved + eps;
+ forward_propagation(neural_network);
+ c1 = MSE(neural_network->layers[neural_network->layer_count - 1].as, to);
 
-        MAT_AT(grad->layers[i].ws, row, col) = (c1 - c2) / (2 * eps);
-        *w = saved;
-      }
-    }
+ *w = saved - eps;
+ forward_propagation(neural_network);
+ c2 = MSE(neural_network, ti, to);
 
-    for (size_t col = 0; col < neural_network->layers[i].bs.cols; col++) {
-      float *w = &MAT_AT(neural_network->layers[i].bs, 0, col);
-      float saved = *w;
+ MAT_AT(grad->layers[i].ws, row, col) = (c1 - c2) / (2 * eps);
+ *w = saved;
+ }
+ }
 
-      *w = saved + eps;
-      c1 = MSE(neural_network, ti, to);
+ for (size_t col = 0; col < neural_network->layers[i].bs.cols; col++) {
+ float *w = &MAT_AT(neural_network->layers[i].bs, 0, col);
+ float saved = *w;
 
-      *w = saved - eps;
-      c2 = MSE(neural_network, ti, to);
+ *w = saved + eps;
+ c1 = MSE(neural_network, ti, to);
 
-      MAT_AT(grad->layers[i].bs, 0, col) = (c1 - c2) / (2 * eps);
-      *w = saved;
-    }
-  }
-}
+ *w = saved - eps;
+ c2 = MSE(neural_network, ti, to);
+
+ MAT_AT(grad->layers[i].bs, 0, col) = (c1 - c2) / (2 * eps);
+ *w = saved;
+ }
+ }
+ }
 */
 
 inline void static gradient_diff(NN *network, gradient * grad) {
@@ -328,14 +330,15 @@ int backward_propagation(NN *network, gradient *grad, Mat ti, Mat to) {
     // w(L) - weights of current layer
     // C0 - cost of current sample
 
-    // derivative of C0 in respect to a(L) * derivative of a(L) in respect to z(L)
-    // stored inside the output layer of the gradient
-
     for (size_t j = 0; j < y_predicted->cols; j++) {
       float activation = MAT_AT(*y_predicted, 0, j);
       float expected = MAT_AT(y_expected, 0, j);
+
+      // derivative of C0 in respect to a(L)
       float loss_deriv = compute_loss_deriv(activation, expected, network->loss_function);
-      float act_deriv = dactf(activation, NN_ACT);
+
+      // derivative of z(L) in respect to a(L)
+      float act_deriv = dactf(activation, network->layers[network->layer_count - 1].act_func);
 
       MAT_AT(grad->layers[grad->layer_count - 1].as, 0, j) = 
         loss_deriv * act_deriv;
@@ -356,20 +359,22 @@ int backward_propagation(NN *network, gradient *grad, Mat ti, Mat to) {
       layer *previous = &network->layers[l - 1];
       layer *grad_current = &grad->layers[l];
 
-      // derivative of b(L)
+      // derivative of C0 in respect b(L)
       for (size_t j = 0; j < current->bs.cols; j++) 
         MAT_AT(grad_current->bs, 0, j) += MAT_AT(*delta, 0, j);
 
-      // derivative of w(L) 
-
+      // derivative of C0 in respect to w(L) 
       for (size_t j = 0; j < current->ws.rows; j++) 
         for (size_t k = 0; k < current->ws.cols; k++) {
-          float d= MAT_AT(*delta, 0, k);
+          float d = MAT_AT(*delta, 0, k);
+
+          // derivative of z(L) in respect to w(L)
           float a_prev = MAT_AT(previous->as, 0, j);
+
           MAT_AT(grad_current->ws, j, k) += d * a_prev;
         }
       
-      // derivative of a(L-1)
+      // derivative of C0 in respect to a(L-1)
       if (l >= 1) {
         Mat *prev_delta = &grad->layers[l - 1].as;
         for (size_t j = 0; j < current->ws.rows; j++) {
@@ -380,7 +385,7 @@ int backward_propagation(NN *network, gradient *grad, Mat ti, Mat to) {
             sum += w * d; 
           }
           float a = MAT_AT(previous->as, 0, j);
-          MAT_AT(*prev_delta, 0, j) = sum * dactf(a, NN_ACT);
+          MAT_AT(*prev_delta, 0, j) = sum * dactf(a, current->act_func);
         }
         delta = prev_delta;
       }
@@ -408,15 +413,31 @@ int learn(NN *network, Mat ti, Mat to, size_t epochs, int (*fn)(NN *network, gra
   if (gradient_init(&grad, network))
     return -1;
 
+  Mat x;
+  Mat *predictions;
+  Mat expected;
+  mat_init(&x, 1, ti.cols);
+  mat_init(&expected, 1, to.cols);
   for (size_t epoch = 0; epoch < epochs; epoch++) {
     fn(network, &grad, ti, to);
     if (epoch % 10 == 0) {
-      Mat *predicted = &network->layers[network->layer_count - 1].as;
-      printf("cost at epoch {%ld}: %f\n", epoch, compute_loss(to, *predicted, network->loss_function));
+      float cost = 0.0f;
+      for (size_t i = 0; i < ti.rows; i++) {
+        mat_row(&x, &ti, i);
+        mat_row(&expected, &to, i);
+        mat_inplace_copy(&network->layers[0].as, &x);
+
+        forward_propagation(network);
+
+        predictions = &network->layers[network->layer_count - 1].as;
+        cost += compute_loss(*predictions, expected, network->loss_function);
+      }
+      printf("cost at epoch {%ld}: %f\n", epoch, cost / ti.rows);
     }
-    
   }
 
+  mat_deinit(&x);
+  mat_deinit(&expected);
   gradient_deinit(&grad);
 
   return 0;
